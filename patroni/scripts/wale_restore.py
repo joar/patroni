@@ -238,8 +238,8 @@ class WALERestore(object):
 
 
 def main():
-    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=logging.INFO)
     parser = argparse.ArgumentParser(description='Script to image replicas using WAL-E')
+    parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--scope', required=True)
     parser.add_argument('--role', required=False)
     parser.add_argument('--datadir', required=True)
@@ -251,6 +251,10 @@ def main():
     parser.add_argument('--use_iam', type=int, default=0)
     parser.add_argument('--no_master', type=int, default=0)
     args = parser.parse_args()
+
+    level = logging.DEBUG if args.verbose else logging.INFO
+    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
+                        level=level)
 
     # Retry cloning in a loop. We do separate retries for the master
     # connection attempt inside should_use_s3_to_create_replica,
