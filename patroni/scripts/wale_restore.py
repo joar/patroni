@@ -235,16 +235,16 @@ class WALERestore(object):
             logger.error(
                 'WAL-E backup size diff is over threshold, falling back '
                 'to other means of restore. '
-                'Thresholds: size=%r (MB), percent=%r, percent as bytes: %r. '
-                'Backup size: %r (bytes) '
-                'diff_in_bytes=%r'
-                'is_size_thresh_ok=%r'
-                'is_percent_thresh_ok=%r',
+                'Thresholds: size=%r (MiB), percent=%r, percent as bytes: %r. '
+                'Backup size: %r (MiB) '
+                'Difference: %r '
+                'is_size_thresh_ok=%r '
+                'is_percent_thresh_ok=%r ',
                 threshold_megabytes,
                 threshold_percent,
                 threshold_pct_bytes,
                 backup_size,
-                diff_in_bytes,
+                diff_in_bytes / 1024.0 / 1024.0,
                 is_size_thresh_ok,
                 is_percentage_thresh_ok,
             )
