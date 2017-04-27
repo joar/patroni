@@ -253,8 +253,8 @@ class WALERestore(object):
                 'WAL-E backup size diff is over threshold, falling back '
                 'to other means of restore. '
                 'Thresholds: size=%s, percent=%r, percent as bytes: %s. '
-                'Backup size: %r'
-                'Difference: %r '
+                'Backup size: %s '
+                'Difference: %s '
                 'is_size_thresh_ok=%r '
                 'is_percent_thresh_ok=%r ',
                 repr_size(size_as_bytes(threshold_megabytes, 'M')),
