@@ -25,6 +25,7 @@
 #               restore_command: envdir /etc/wal-e.d/env wal-e wal-fetch "%f" "%p" -p 1
 import csv
 from collections import namedtuple
+import humanize
 import logging
 import os
 from enum import IntEnum
@@ -63,6 +64,22 @@ def get_major_version(data_dir):
         except Exception:
             logger.exception('Failed to read PG_VERSION from %s', data_dir)
     return 0.0
+
+
+def repr_size(size_):
+    return humanize.naturalsize(size_, binary=True)
+
+
+def size_as_bytes(size_, prefix):
+    si_prefixes = ['K', 'M', 'G', 'T'', P', 'E', 'Z', 'Y']
+
+    prefix = prefix.upper()
+
+    assert prefix in si_prefixes
+
+    exponent = si_prefixes.index(prefix) + 1
+
+    return size_ * 1024.0 ** -exponent
 
 
 WALEConfig = namedtuple(
@@ -235,16 +252,16 @@ class WALERestore(object):
             logger.error(
                 'WAL-E backup size diff is over threshold, falling back '
                 'to other means of restore. '
-                'Thresholds: size=%r (MiB), percent=%r, percent as bytes: %r. '
-                'Backup size: %r (MiB) '
+                'Thresholds: size=%s, percent=%r, percent as bytes: %s. '
+                'Backup size: %r'
                 'Difference: %r '
                 'is_size_thresh_ok=%r '
                 'is_percent_thresh_ok=%r ',
-                threshold_megabytes,
+                repr_size(size_as_bytes(threshold_megabytes, 'M')),
                 threshold_percent,
-                threshold_pct_bytes,
-                backup_size,
-                diff_in_bytes / 1024.0 / 1024.0,
+                repr_size(threshold_pct_bytes),
+                repr_size(backup_size),
+                repr_size(diff_in_bytes),
                 is_size_thresh_ok,
                 is_percentage_thresh_ok,
             )
