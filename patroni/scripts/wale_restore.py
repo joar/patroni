@@ -139,7 +139,7 @@ class WALERestore(object):
         """ determine whether it makes sense to use S3 and not pg_basebackup """
 
         threshold_megabytes = self.wal_e.threshold_mb
-        threshold_backup_size_percentage = self.wal_e.threshold_pct
+        threshold_percent = self.wal_e.threshold_pct
 
         try:
             cmd = self.wal_e.cmd + ['backup-list', '--detail', 'LATEST']
@@ -169,7 +169,7 @@ class WALERestore(object):
             return None
 
         try:
-            backup_size = backup_info['expanded_size_bytes']
+            backup_size = int(backup_info['expanded_size_bytes'])
             backup_start_segment = backup_info['wal_segment_backup_start']
             backup_start_offset = backup_info['wal_segment_offset_backup_start']
         except KeyError:
@@ -187,7 +187,7 @@ class WALERestore(object):
         # construct the LSN from the segment and offset
         backup_start_lsn = '{0}/{1}'.format(lsn_segment, lsn_offset)
 
-        diff_in_bytes = int(backup_size)
+        diff_in_bytes = backup_size
         attempts_no = 0
         while True:
             if self.master_connection:
@@ -226,8 +226,29 @@ class WALERestore(object):
 
         # if the size of the accumulated WAL segments is more than a certan percentage of the backup size
         # or exceeds the pre-determined size - pg_basebackup is chosen instead.
-        return (diff_in_bytes < int(threshold_megabytes) * 1048576) and\
-            (diff_in_bytes < int(backup_size) * float(threshold_backup_size_percentage) / 100)
+        is_size_thresh_ok = diff_in_bytes < int(threshold_megabytes) * 1048576
+        threshold_pct_bytes = backup_size * threshold_percent / 100.0
+        is_percentage_thresh_ok = float(diff_in_bytes) < int(threshold_pct_bytes)
+        are_thresholds_ok = is_size_thresh_ok and is_percentage_thresh_ok
+
+        if not are_thresholds_ok:
+            logger.error(
+                'WAL-E backup size diff is over threshold, falling back '
+                'to other means of restore. '
+                'Thresholds: size=%r (MB), percent=%r, percent as bytes: %r. '
+                'Backup size: %r (bytes) '
+                'diff_in_bytes=%r'
+                'is_size_thresh_ok=%r'
+                'is_percent_thresh_ok=%r',
+                threshold_megabytes,
+                threshold_percent,
+                threshold_pct_bytes,
+                backup_size,
+                diff_in_bytes,
+                is_size_thresh_ok,
+                is_percentage_thresh_ok,
+            )
+        return are_thresholds_ok
 
     def fix_subdirectory_path_if_broken(self, dirname):
         # in case it is a symlink pointing to a non-existing location, remove it and create the actual directory
