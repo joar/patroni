@@ -175,7 +175,10 @@ class Postgresql(object):
         parameters.update({'cluster_name': self.scope, 'listen_addresses': listen_addresses, 'port': port})
         if config.get('synchronous_mode', False):
             if self._synchronous_standby_names is None:
-                parameters.pop('synchronous_standby_names', None)
+                if config.get('synchronous_mode_strict', False):
+                    parameters['synchronous_standby_names'] = '*'
+                else:
+                    parameters.pop('synchronous_standby_names', None)
             else:
                 parameters['synchronous_standby_names'] = self._synchronous_standby_names
         if self._major_version >= 9.6 and parameters['wal_level'] == 'hot_standby':
@@ -717,7 +720,8 @@ class Postgresql(object):
         # In order to make everything portable we can't use fork&exec approach here, so  we will call
         # ourselves and pass list of arguments which must be used to start postgres.
         proc = call_self(['pg_ctl_start', self._pgcommand('postgres'), '-D', self._data_dir] + options, close_fds=True,
-                         preexec_fn=os.setsid, stdout=subprocess.PIPE, env={'PATH': os.environ.get('PATH')})
+                         preexec_fn=os.setsid, stdout=subprocess.PIPE,
+                         env={p: os.environ[p] for p in ('PATH', 'LC_ALL', 'LANG') if p in os.environ})
         pid = int(proc.stdout.readline().strip())
         proc.wait()
         logger.info('postmaster pid=%s', pid)
